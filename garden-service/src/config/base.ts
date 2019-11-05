@@ -142,7 +142,7 @@ function prepareProjectConfig(spec: any, path: string, configPath: string): Proj
   return spec
 }
 
-function prepareModuleResource(spec: any, path: string, configPath: string): ModuleResource {
+export function prepareModuleResource(spec: any, path: string, configPath?: string): ModuleResource {
   /**
    * We allow specifying modules by name only as a shorthand:
    *   dependencies:

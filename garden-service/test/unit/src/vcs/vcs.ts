@@ -67,7 +67,7 @@ describe("VcsHandler", () => {
   describe("getTreeVersion", () => {
     it("should sort the list of files in the returned version", async () => {
       const getFiles = td.replace(handlerA, "getFiles")
-      const moduleConfig = await gardenA.resolveModuleConfig("module-a")
+      const moduleConfig = await gardenA.resolveModuleConfig(gardenA.log, "module-a")
       td.when(
         getFiles({
           log: gardenA.log,
@@ -82,7 +82,7 @@ describe("VcsHandler", () => {
 
     it("should not include the module config file in the file list", async () => {
       const getFiles = td.replace(handlerA, "getFiles")
-      const moduleConfig = await gardenA.resolveModuleConfig("module-a")
+      const moduleConfig = await gardenA.resolveModuleConfig(gardenA.log, "module-a")
       td.when(
         getFiles({
           log: gardenA.log,
@@ -98,7 +98,7 @@ describe("VcsHandler", () => {
     it("should respect the include field, if specified", async () => {
       const projectRoot = getDataDir("test-projects", "include-exclude")
       const garden = await makeTestGarden(projectRoot)
-      const moduleConfig = await garden.resolveModuleConfig("module-a")
+      const moduleConfig = await garden.resolveModuleConfig(garden.log, "module-a")
       const handler = new GitHandler(garden.gardenDirPath, garden.dotIgnoreFiles)
 
       const version = await handler.getTreeVersion(gardenA.log, moduleConfig)
@@ -109,7 +109,7 @@ describe("VcsHandler", () => {
     it("should respect the exclude field, if specified", async () => {
       const projectRoot = getDataDir("test-projects", "include-exclude")
       const garden = await makeTestGarden(projectRoot)
-      const moduleConfig = await garden.resolveModuleConfig("module-b")
+      const moduleConfig = await garden.resolveModuleConfig(garden.log, "module-b")
       const handler = new GitHandler(garden.gardenDirPath, garden.dotIgnoreFiles)
 
       const version = await handler.getTreeVersion(garden.log, moduleConfig)
@@ -120,7 +120,7 @@ describe("VcsHandler", () => {
     it("should respect both include and exclude fields, if specified", async () => {
       const projectRoot = getDataDir("test-projects", "include-exclude")
       const garden = await makeTestGarden(projectRoot)
-      const moduleConfig = await garden.resolveModuleConfig("module-c")
+      const moduleConfig = await garden.resolveModuleConfig(garden.log, "module-c")
       const handler = new GitHandler(garden.gardenDirPath, garden.dotIgnoreFiles)
 
       const version = await handler.getTreeVersion(garden.log, moduleConfig)
@@ -131,7 +131,7 @@ describe("VcsHandler", () => {
     it("should not be affected by changes to the module's garden.yml that don't affect the module config", async () => {
       const projectRoot = getDataDir("test-projects", "multiple-module-config")
       const garden = await makeTestGarden(projectRoot)
-      const moduleConfigA1 = await garden.resolveModuleConfig("module-a1")
+      const moduleConfigA1 = await garden.resolveModuleConfig(garden.log, "module-a1")
       const configPath = moduleConfigA1.configPath!
       const orgConfig = await readFile(configPath)
 
@@ -148,7 +148,7 @@ describe("VcsHandler", () => {
 
   describe("resolveTreeVersion", () => {
     it("should return the version from a version file if it exists", async () => {
-      const moduleConfig = await gardenA.resolveModuleConfig("module-a")
+      const moduleConfig = await gardenA.resolveModuleConfig(gardenA.log, "module-a")
       const result = await handlerA.resolveTreeVersion(gardenA.log, moduleConfig)
 
       expect(result).to.eql({
@@ -158,7 +158,7 @@ describe("VcsHandler", () => {
     })
 
     it("should call getTreeVersion if there is no version file", async () => {
-      const moduleConfig = await gardenA.resolveModuleConfig("module-b")
+      const moduleConfig = await gardenA.resolveModuleConfig(gardenA.log, "module-b")
 
       const version = {
         contentHash: "qwerty",
@@ -180,8 +180,10 @@ describe("VcsHandler", () => {
     before(async () => {
       const templateGarden = await makeTestGarden(getDataDir("test-project-variable-versioning"))
 
-      moduleABefore = await templateGarden.resolveModuleConfig("module-a") // uses the echo-string variable
-      moduleBBefore = await templateGarden.resolveModuleConfig("module-b") // does not use the echo-string variable
+      // uses the echo-string variable
+      moduleABefore = await templateGarden.resolveModuleConfig(templateGarden.log, "module-a")
+      // does not use the echo-string variable
+      moduleBBefore = await templateGarden.resolveModuleConfig(templateGarden.log, "module-b")
 
       const configContext = new ModuleConfigContext(
         templateGarden,
@@ -190,10 +192,10 @@ describe("VcsHandler", () => {
         await templateGarden.getRawModuleConfigs()
       )
 
-      moduleAAfter = await templateGarden.resolveModuleConfig("module-a", {
+      moduleAAfter = await templateGarden.resolveModuleConfig(templateGarden.log, "module-a", {
         configContext,
       })
-      moduleBAfter = await templateGarden.resolveModuleConfig("module-b", {
+      moduleBAfter = await templateGarden.resolveModuleConfig(templateGarden.log, "module-b", {
         configContext,
       })
     })
@@ -236,7 +238,7 @@ describe("VcsHandler", () => {
 
     describe("hashVersions", () => {
       it("is stable with respect to key order in moduleConfig", async () => {
-        const originalConfig = await gardenA.resolveModuleConfig("module-a")
+        const originalConfig = await gardenA.resolveModuleConfig(gardenA.log, "module-a")
         const stirredConfig = cloneDeep(originalConfig)
         delete stirredConfig.name
         stirredConfig.name = originalConfig.name
@@ -245,7 +247,7 @@ describe("VcsHandler", () => {
       })
 
       it("is stable with respect to named version order", async () => {
-        const config = await gardenA.resolveModuleConfig("module-a")
+        const config = await gardenA.resolveModuleConfig(gardenA.log, "module-a")
 
         expect(getVersionString(config, [namedVersionA, namedVersionB, namedVersionC])).to.eql(
           getVersionString(config, [namedVersionB, namedVersionA, namedVersionC])
@@ -256,7 +258,7 @@ describe("VcsHandler", () => {
 
   describe("resolveVersion", () => {
     it("should return module version if there are no dependencies", async () => {
-      const module = await gardenA.resolveModuleConfig("module-a")
+      const module = await gardenA.resolveModuleConfig(gardenA.log, "module-a")
       const result = await handlerA.resolveVersion(gardenA.log, module, [])
 
       expect(result).to.eql({
@@ -267,7 +269,11 @@ describe("VcsHandler", () => {
     })
 
     it("should hash together the version of the module and all dependencies", async () => {
-      const [moduleA, moduleB, moduleC] = await gardenA.resolveModuleConfigs(["module-a", "module-b", "module-c"])
+      const [moduleA, moduleB, moduleC] = await gardenA["resolveModuleConfigs"](gardenA.log, [
+        "module-a",
+        "module-b",
+        "module-c",
+      ])
 
       const versionStringB = "qwerty"
       const versionB = {
@@ -298,13 +304,13 @@ describe("VcsHandler", () => {
     })
 
     it("should not include module's garden.yml in version file list", async () => {
-      const moduleConfig = await gardenA.resolveModuleConfig("module-a")
+      const moduleConfig = await gardenA.resolveModuleConfig(gardenA.log, "module-a")
       const version = await handlerA.resolveVersion(gardenA.log, moduleConfig, [])
       expect(version.files).to.not.include(moduleConfig.configPath!)
     })
 
     it("should be affected by changes to the module's config", async () => {
-      const moduleConfig = await gardenA.resolveModuleConfig("module-a")
+      const moduleConfig = await gardenA.resolveModuleConfig(gardenA.log, "module-a")
       const version1 = await handlerA.resolveVersion(gardenA.log, moduleConfig, [])
       moduleConfig.name = "foo"
       const version2 = await handlerA.resolveVersion(gardenA.log, moduleConfig, [])
@@ -314,7 +320,7 @@ describe("VcsHandler", () => {
     it("should not be affected by changes to the module's garden.yml that don't affect the module config", async () => {
       const projectRoot = getDataDir("test-projects", "multiple-module-config")
       const garden = await makeTestGarden(projectRoot)
-      const moduleConfigA1 = await garden.resolveModuleConfig("module-a1")
+      const moduleConfigA1 = await garden.resolveModuleConfig(garden.log, "module-a1")
       const configPath = moduleConfigA1.configPath!
       const orgConfig = await readFile(configPath)
 

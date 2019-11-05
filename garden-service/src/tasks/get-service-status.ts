@@ -98,7 +98,7 @@ export class GetServiceStatusTask extends BaseTask {
     const actions = await this.garden.getActionRouter()
 
     // Some handlers expect builds to have been staged when resolving services statuses.
-    const graph = await this.garden.getConfigGraph()
+    const graph = await this.garden.getConfigGraph(log)
     await this.garden.buildDir.syncFromSrc(this.service.module, log)
     await this.garden.buildDir.syncDependencyProducts(this.service.module, graph, log)
 
